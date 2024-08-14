@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This module defines a Cache class to interact with a Redis database, and decorators to count method calls and store call history.
+This module defines a Cache class to interact with a Redis database, and decorators to count method calls and store call history. It also includes a replay function to display the history of calls.
 """
 
 import redis
@@ -127,4 +127,25 @@ class Cache:
             Optional[int]: The data converted to an integer, or None if the key doesn't exist.
         """
         return self.get(key, fn=int)
+
+
+def replay(method: Callable):
+    """
+    Display the history of calls of a particular function.
+    
+    Args:
+        method (Callable): The method for which the call history is to be displayed.
+    """
+    # Create input and output keys based on the method's qualified name
+    input_key = f"{method.__qualname__}:inputs"
+    output_key = f"{method.__qualname__}:outputs"
+
+    # Retrieve inputs and outputs from Redis
+    inputs = method.__self__._redis.lrange(input_key, 0, -1)
+    outputs = method.__self__._redis.lrange(output_key, 0, -1)
+
+    # Display the history of calls
+    print(f"{method.__qualname__} was called {len(inputs)} times:")
+    for input_data, output_data in zip(inputs, outputs):
+        print(f"{method.__qualname__}(*{input_data.decode('utf-8')}) -> {output_data.decode('utf-8')}")
 
